@@ -1,0 +1,51 @@
+---
+title: 'Integrating git into our development workflow'
+date: '2018-10-12'
+tags: 'git hooks,editor-integration,merge-conflict'
+description: 'Lets learn how we can easily integrate git into out workflow using git hooks'
+---
+
+As developers, we all are using **git/github** in our projects. Our most commonly used command are `git add` `git commit` `git push` `git pull`, which are used for _managing version of our code_. We generally don't us these commands as helpers to improve our development workflow. Wouldn't it be nice if we can run **linter** on our new changes before committing, **running tests** before pushing our changes to remote, maintaining a **commit message format** for easy understanding it. We actually can. Let's see how.
+
+## Git hooks
+
+What we need for doing our tasks before some git operations ? Well **Git Hooks**. <a href="https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks" target="_blank">Git hooks</a> are ways to hook into git workflow like staging changes, committing,
+pushing etc. Git Hooks (i.e. pre-commit, prepare-commit-msg, commit-msg, post-commit, post-commit, update etc) are stored in `hooks` subdirectory in a git repository, in most projects, they are in **.git/hooks**. Git provides some really helpfull git hook samples in `.git/hooks directory`. We can categories these hooks in two categories: **Client side hooks** and **Server side hooks**. As name suggest, Client side hooks stays on developer's machine to help them integrate in there workflow whereas Server side hooks are for Manager which want to enforce some policies over PRs.
+
+### Client side hooks
+
+**NOTE: .git is not copied over push/pull**
+
+We we browse content from `.git/hooks` directory, we see some sample hooks. Sample codes are written in `ruby` or in `bash` but any scripting language can be used for git hooks. Just pick any sample and remove sample from end and make it excutable to see it working. Let's do it together. Create a new git directory.
+
+```bash
+mkdir git-hooks
+cd git-hooks
+git init
+touch README.md
+git add .
+mv .git/hooks/commit-msg.sample .git/hooks/commit-msg
+```
+
+Now put following content in the `.git/hooks/commit-msg` file.
+
+```bash
+# first argument contains the file path to the commit message file
+
+echo "Your commit message is:"
+cat $1 # print the content of the commit message file which is basically out commit message
+exit 1 # any non-zero status will abort the process
+```
+
+Now save it and make it executable `chmod +x .git/hooks/commit-msg`. Now run `git commit -m "init commit"` and you should see our message output with commit aborted (try `git status` to see staged changes ready to commit)
+
+Simillar to this, there are some other git hooks which can be utilized in our workflow. A complete list can be found <a href="https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks" target="_blank">here</a>. Following hooks are generally used.
+
+- **pre-commit**: This is the first hook that gets called when we run `git commit`. We normally run our linter and test (only relevant) on the staged files (we can get them by `git diff --name-only --cached`) in this hook.
+- **commit-msg**: This hooks gets called when git is about to commit the changes. Here we get the commit message file
+  path as argument and can easily enforce a commit policy on client side.
+- **pre-push**: This hook gets called before pushing our changes to remove. We can use this hook to run all tests to make sure everything is working fine.
+
+### Server side hooks
+
+Server side hooks are created in the same way as we create our client side hooks, but they presist on server where pushes and PRs are handled to enforce some development policies.

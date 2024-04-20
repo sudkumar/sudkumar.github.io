@@ -1,0 +1,286 @@
+---
+title: 'Automatic Semantic Versioning and Releasing Applications'
+date: '2019-08-15'
+tags: 'semantic-release,github-releases,semver,changelog,commitlint'
+description: "Let's see how we can semantically version our application and automate the versioning and releases."
+---
+
+At some points in our software development process, we will want to tag our developed features for various reasons like:
+
+- To keep a change log of new development so that everybody knows, "What's new"
+- To remove the communication gap between clients and sales teams with respect to the versions
+
+So, with that in mind, we should version our applications. In this writeup, I will walk you through versioning
+and releases where our application's source code is hosted on Github and we can use **NPM**.
+
+> We can use NPM wherever we can use Node. If you want to version a native app (Android or IOS), you will not want to use
+> npm and so, this writeup may not solve your problem directly. But you will get the idea of how it's done and what to
+> look for your specific use case.
+
+There are two ways of versioning: `Manual` and `Automatic`.
+
+## Manual Versioning
+
+In Manual versioning, as the name suggest, we push our code to remote (Github), create a tag for the last
+commit, create a release for this tag, add release notes and done. By versioning this way, we have some issues.
+
+1. How do we decide the next version ? Are we following the [semantic versioning](https://semver.org/)?
+2. How do we get the release notes ?
+3. How do we put this version and release notes inside our application code ? This can be a requirement when we want to
+   show the current version inside our application's UI or docs.
+4. It's is fine if we need to release once in a while. But what we the releases are frequent?
+
+With all these issue with manual versioning, we want to automate the versioning which solves all the above problems.
+
+## Automatic Versioning
+
+To automate the process of versioning, we will need to write some scripts that does following tasks:
+
+1. Find out what should be the next version ?
+   This is a bit tricky. Just by reading the commit messages, we can not identify the next release! Can we?
+   Yes we can, with a little bit help from the contributes while writting the commit messages. With a predefined commit
+   message format, if we can identify what a commit message brings to the application (bug fixed, new feature, breaking
+   change, code refactoring etc), we can identify the next version easily.
+2. Find out what's new since last release and create a change log ?
+   This can be easily done by taking a diff of last relase and current state of application.
+
+**Lucky for us**, these problems have already been solved. A project named [semantic release](https://semantic-release.gitbook.io/semantic-release/) was built for this purpose. So we just need to integrate it into our application. We will start our quest to identify the next version by formatting the commit messages.
+
+> `semantic-release` is a Node package managed by NPM. If your application is not using Node, you will need to install node and create a `package.json`
+> by executing `npm init --yes` from root of your project.
+
+### Formatting commit message with conventional commits
+
+To solve the problem of **What should be the next version**, we will need to write our commit message by following some
+guideline. To help us out with the formatting, we will install need some modules.
+
+Let's start by installing following node packages to help us out in this process.
+
+```bash
+npm install --save-dev commitizen cz-conventional-changelog
+```
+
+A little description about the installed packages
+
+- **commitizen:** Helps us format out messages easily with a custom command to `git commit`
+- **cz-conventional-changelog:** Standards for message formatting, used by commitizen
+
+With above packages installed, let's configure them. We will put these keys inside our `package.json` file.
+
+```json
+{
+  "version": "0.0.0-semantic-released",
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "scripts": {
+    "commit": "git-cz"
+  }
+}
+```
+
+> If `config` or `scripts` keys are already present in your package.json file, just append the content to the existing
+> ones. The **version** field should be update to any git tag that you may already have or keep it this way if there is none.
+> This version will automatically be updated to our latest release.
+
+Now, to commit changes, instead of executing `git commit`, we will use `npm run commit` to use our custom script.
+
+> **Tip**: Any key defined in `scripts`'s key can be invoked via `npm run <script-name>` from command line.
+
+After executing `npm run commmit`, we will prompted to choose a type of change. This scope determines the effect of this commit for
+the next version. After choosing, we will add a scope of change. A scope is nothing but a keyword to identify the
+module that has been updated. After that we will be prompted to provide a short description, full message, breaking
+change and bug fixed. `cz-conventional-changelog` is the one that is responsible to prompting different kind of options
+here.
+
+Now that we have committed our changes, we are ready to automate our versioning and release process.
+
+### Automate versioning and release process
+
+We will execute the following command to install the dependencies that we will help us in the process:
+
+```bash
+npm install --save-dev env-cmd semantic-release  @semantic-release/git @semantic-release/changelog
+```
+
+A short description for each package
+
+- **semantic-release:** creates release notes, gets next version, pushes release to github
+- **@semantic-release/git:** create release commit to github (version inside application code)
+- **@semantic-release/changelog:** create a changelog file (changelog inside application code)
+- **env-cmd:** to load a `.env` file
+
+After installing these packages, we will update our `package.json` to use them for releasing
+
+```json
+{
+  "scripts": {
+    "release": "env-cmd -f .env.tokens semantic-release"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      [
+        "@semantic-release/npm",
+        {
+          "npmPublish": false
+        }
+      ],
+      [
+        "@semantic-release/git",
+        {
+          "message": "chore(release): ${nextRelease.version} :tada: :rocket:\n\n${nextRelease.notes}"
+        }
+      ],
+      "@semantic-release/github"
+    ],
+    "ci": false
+  }
+}
+```
+
+Now, after commit these changes with `npm run commit`, we will be able to release to github.
+
+> We have disabled the `npmPublish` as we only want to release to github. And also, `ci` (continuous integration) is set
+> to `false`. This can be set to true to automate the release from ci server e.g. travis, circleci etc based on merge to
+> `master` branch. To release a new version, we will need a [github personal token](https://github.com/settings/tokens)
+> with `repo` access. Create a `.env.tokens` file and put following content inside it.
+
+```bash
+GITHUB_TOKEN=<paste_your_personal_github_token_here>
+```
+
+> We should also add `.env.tokens` into `.gitignore` to ignore this file from git history.
+
+Now execute `npm run release` to release a new version of your application. Visit your application's remote and your should
+a new release and a new release message commit.
+
+## A step further - Validating our commit message
+
+We are DONE with then automatic release process. We should update our `README` to reflect these change and document them for future contribution like the
+committing process, release process etc.
+
+There is one more thing that we need to take care of:
+
+** What if someone forgets `npm run commit` and types `git commit -m <message>` to commit changes?** If this happens, then we may loose this change from our changelog!
+
+To make sure that all the message are following the standard format,
+we should validate the commit message before committing.
+We can use [git hooks](/blogs/@sudkumar/integrating-git-into-our-development-workflow)
+to hook into the committing process and validate the commit message. To help use out in this process, we we use some
+packages. So, let's install them first.
+
+```bash
+npm install --save-dev husky @commitlint/cli @commitlint/config-conventional
+```
+
+- `husky`: helper to execute our custom git hooks
+- `@commitlint/cli`: for linting our commited message
+- `@commitlint/config-conventional`: validator for committed messages
+
+With these packages installed, we will need to updated our `package.json` for hooks to work:
+
+```json
+{
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
+}
+```
+
+With these changes, whatever method contributor usage to commit the change (`npm run commit` or `git commit`), we
+will pass the message through the validator which will make sure that message follows the predefined format.
+
+## In Short
+
+If you haven't gone through the previous sections, I would strongly recommand to check them first to get the core idea of what is happening.
+
+And if you already have, let's do it quickly:
+
+### Install the dependencies
+
+```bash
+npm install --save-dev commitizen cz-conventional-changelog env-cmd semantic-release  @semantic-release/git @semantic-release/changelog husky @commitlint/cli @commitlint/config-conventional
+```
+
+### Update the `package.json`
+
+```json
+{
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "scripts": {
+    "commit": "git-cz",
+    "release": "env-cmd -f .env.tokens semantic-release"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      [
+        "@semantic-release/npm",
+        {
+          "npmPublish": false
+        }
+      ],
+      [
+        "@semantic-release/git",
+        {
+          "message": "chore(release): ${nextRelease.version} :tada: :rocket:\n\n${nextRelease.notes}"
+        }
+      ],
+      "@semantic-release/github"
+    ],
+    "ci": false
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
+```
+
+Now create a `.env.tokens` (gitignore it) with `GITHUB_TOKEN` that contains your personal access token for `repo` access and you are ready
+to release your semantically versioned app.
+
+You should use `npm run commit` to commit all your future changes and `npm run release` to release a new version of your app.
+
+## Troubleshooting
+
+You may ran into some issue when you execute `npm run release`.
+Semantic release provides really helpful error messages, so you should be able to solve most of them by your own. You should definitely checkout there [usage docs](https://github.com/semantic-release/semantic-release/tree/master/docs/usage) for any customizations. Here as some common problems that you may encounter:
+
+### 1. First time releasing with existing version as 1.0.0
+
+If you are releasing your application for the first time and your `package.json` has a `version` field `1.0.0`, you may get an error stating: **Versions not changed**. Because this is the first release and semantic pulls your latest github release tag (which is nothing yet) and calculates the next release (which will be 1.0.0 for the first time). To get over this issue, you should set the version field to `0.0.0-semantic-released`. This way, our version will be updated to `1.0.0` when we execute `npm run release` and this new version will be released.
+
+### 2. Different release branch then `master`
+
+You might have a different release (default) branch then `master` (it is in my case of this website's code). If that is the case,
+you should update the `release` key of your package.json to include a `branch` key as follows:
+
+Assuming your default branch is `next`:
+
+```json
+{
+  "release": {
+    "branch": "next"
+  }
+}
+```
