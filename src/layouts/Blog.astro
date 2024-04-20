@@ -1,0 +1,15 @@
+---
+interface Props {
+	title: string;
+}
+
+import Layout from '../layouts/Layout.astro';
+const { title } = Astro.props;
+---
+
+<Layout title={title + " | Sudhir's Post"}>
+  <article class="prose lg:prose-xl mx-auto py-8">
+    <a href="/">All Posts</a>
+    <slot />
+  </article>
+</Layout>

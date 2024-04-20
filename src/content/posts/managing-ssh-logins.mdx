@@ -1,0 +1,106 @@
+---
+title: 'Managing SSH Logins'
+date: '2018-08-12'
+tags: 'ssh/config,public/private-keys'
+description: 'Learn how we can manage our ssh credentials and use them with ease'
+---
+
+We all have use `ssh username@ip` in our development cycle or some of us start their development by doing it. What our general flow is ?
+
+```sh
+$ user@local:> ssh username@ip
+Please enter your password >
+.
+.
+$ user@ip:>
+```
+
+We have to remember a few things to do this action: **username**, **ip**, and **password**. That's is a lot. What we if can simply say `ssh todev` :). Let's see how we can ease this process.
+
+## Using ssh config
+
+We can ssh*config file to manage our ssh logins. Our *~/.ssh/config\* file contains our ssh
+related configurations. We can use this file to hold our server ips, our usernames, preferred
+authentication methods (publickey or password) and some other stuffs. Let's see how we can imporove it.
+Let's assume that we have following credentials available.
+
+- **Server IP:** _172.01.01.12_ (our server's ip or hostname)
+- **Username:** _my_user_name_ (our user name for server)
+- **Password:** _secretpassword_ (our password for server)
+
+Let's first setup our basic ssh configuration
+
+1.  Create a _`~/.ssh/config`_ file if not already present
+2.  Append following lines to our _config_ file
+
+```sh
+Host my_server_login_identifier 172.01.01.12
+HostName 172.01.01.12
+User my_user_name # set PreferredAuthentications to <b>publickey</b> if you have added public/private key authentication
+PreferredAuthentications password # uncomment the line bellow if you have setup the public/private keys authentication # IdentityFile ~/.ssh/my_server_rsa
+AddKeysToAgent yes
+```
+
+3.Now we can do `ssh my_server_login_identifier` to login to our server. This will
+ask us for our password. If you get error for invalid _AddKeysToAgent_ key, just remove it.
+
+## Setting up public/private key authentication
+
+Now let's add public/private key authentication method for our server. Some servers may not allow
+this method of authentication based of configuration but mostly does. So let's start.
+
+### Generating ssh public/private key pair
+
+1. Change your current working directory to _~/.ssh_
+2. Create a ssh public/private key pair by running `ssh-keygen -t rsa -b 4096 -C "myemail@domain.com" -f my_server_rsa` into our terminal. We should provide a
+   pass-phrase for better security. And remember it for some time.
+3. Here _my_server_rsa_ is the file name (default is id_rsa). We should always provide and
+   email id for better identification of owner as the provided email id is appended to our
+   generated public key.
+4. Now let ssh-agent remember out _pass-phrase_. Start agent by running `eval "$(ssh-agent -s)"` followed by `ssh-add -K ~/.ssh/my_server_rsa`. This
+   will ask for pass-phrase.
+5. Now lets copy the content of _~/.ssh/my_server_rsa.pub_ into clipboard
+6. `cat ~/.ssh/my_server_rsa` and copy the output from terminal.
+
+### Server side authorization configuration
+
+Now let see how we can let server know we are an authorized user with a public key.
+
+1. Login into our server with `ssh my_server_login_identifier` along with our
+   password.
+2. Create _~/.ssh_ directory if not already present and _cd ~/.ssh_
+3. Create _authorized_keys_ file if not already present and append the content of
+   clipboard (our public key) to it.
+4. Now let's logout
+
+### Update local ssh configuration for ssh keys
+
+Now that we updated our server for authentication, we need to updated our local ssh configuration to use the public/private key authentication and which key to use for authentication.
+
+1.  Open our _~/.ssh/config_ file.
+2.  Lets add _IdentityFile_ and _PreferredAuthentications_ into our configuration for
+    out server
+3.  Our final configuration should look like this.
+
+```sh
+Host my_server_login_identifier 172.01.01.12
+HostName 172.01.01.12
+User my_user_name
+PreferredAuthentications publickey
+IdentityFile ~/.ssh/my_server_rsa
+AddKeysToAgent yes
+```
+
+4.  Now login into server by running `ssh my_server_login_identifier`. We should be
+    able to directly login into the server. If you get an error for invalid credentials, remove
+    the 172.01.01.12 line from _~/.ssh/known_hosts_ and you should be good to go.
+
+That's it. We have completed our _ssh_ setup. Now we can simply login with our ssh
+identifier.
+
+## What we achieved
+
+1. `ssh my_server_login_identifier` to login into server
+1. If server ip changes, update your **~/.ssh/config** with new ip and just put your existing publickey to new server as mention above.
+1. If your username changes, just update the **~/.ssh/config** with new username
+1. Share your configuration with your team or put it in **CONTRIBUTION or wiki** of your project so that any new developer can start easily.
