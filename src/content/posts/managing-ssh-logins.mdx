@@ -19,16 +19,17 @@ We have to remember a few things to do this action: **username**, **ip**, and **
 
 ## Using ssh config
 
-We can ssh*config file to manage our ssh logins. Our *~/.ssh/config\* file contains our ssh
-related configurations. We can use this file to hold our server ips, our usernames, preferred
-authentication methods (publickey or password) and some other stuffs. Let's see how we can imporove it.
-Let's assume that we have following credentials available.
+We can ssh config file to manage our ssh logins. Our _`~/.ssh/config`_ file contains ssh
+related configurations. We can use this file to hold server ips, our usernames, preferred
+authentication methods (publickey or password) and some other stuffs. 
+
+Let's see how we can imporove it. Let's assume that we have following credentials available.
 
 - **Server IP:** _172.01.01.12_ (our server's ip or hostname)
 - **Username:** _my_user_name_ (our user name for server)
 - **Password:** _secretpassword_ (our password for server)
 
-Let's first setup our basic ssh configuration
+Let's setup our basic ssh configuration
 
 1.  Create a _`~/.ssh/config`_ file if not already present
 2.  Append following lines to our _config_ file
@@ -41,8 +42,12 @@ PreferredAuthentications password # uncomment the line bellow if you have setup 
 AddKeysToAgent yes
 ```
 
-3.Now we can do `ssh my_server_login_identifier` to login to our server. This will
+3.Now we can run the following command in the terminal to login into our server. This will
 ask us for our password. If you get error for invalid _AddKeysToAgent_ key, just remove it.
+
+```sh
+$ ssh my_server_login_identifier
+````
 
 ## Setting up public/private key authentication
 
@@ -51,7 +56,7 @@ this method of authentication based of configuration but mostly does. So let's s
 
 ### Generating ssh public/private key pair
 
-1. Change your current working directory to _~/.ssh_
+1. Change your current working directory to `~/.ssh`
 2. Create a ssh public/private key pair by running `ssh-keygen -t rsa -b 4096 -C "myemail@domain.com" -f my_server_rsa` into our terminal. We should provide a
    pass-phrase for better security. And remember it for some time.
 3. Here _my_server_rsa_ is the file name (default is id_rsa). We should always provide and
