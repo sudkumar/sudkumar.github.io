@@ -1,0 +1,127 @@
+---
+title: 'Always add Unique sorting in Database Queries'
+date: '2024-05-05'
+tags: 'pagination,sorting,mysql,database'
+description: 'Are you facing unusual ordering issue in your application? It might be due to non-unique sorting in your Database queries.'
+---
+
+This one has bit me 2-3 times. I had added ordering on some list item in my application, but (sometimes!) my customers complain about the 
+incorrect ordering. When I try to reproduce it (by adding similar data on my testing environment) the ordering is correct and I was not
+able to reproduce it!
+
+## Problem
+
+Have you faced (or are facing) something similar to this?
+
+1. You have paginated the data but sometimes, **an item appears on multiple pages**? But when you search, it appears only once!
+2. **Ordering of a simple 4-5 items listing is incorrect** sometimes, not as per the application requirements? And you are not able to reproduce it!
+
+Then you should check the ordering (`order by [X]`) statements in your application. Is this ordering unique or there can be items 
+in the list that has same value for this selected ordering column (e.g. invoice due date, start date of tours)? If not unique, 
+then you might have an issue of **unsable sorting**.
+
+## Sorting
+
+Sorting is a type of ordering in which the items are ordered based on a criteria or comparision and going from left-to-right, the criteria
+either increases (**ascending order**) or decreases (**descending order**) or **stays same(!!)**.
+
+Let's understand this with an example. We have 4 people (P) standing in a queue having some score (S), and we need to order them in the
+increasing order of Score (S).
+
+```sh
+COUNTER:  P1     P2     P3     P4    # P1 and P4 has the same Score
+          S=20   S=10   S=30   S=20
+
+# Sorted (1)
+COUNTER:  P2     P1    >P4<    P3
+          S=10   S=20   S=20   S=30
+
+# Or Sorted!! (2)
+COUNTER:  P2     P4    >P1<    P3
+          S=10   S=20   S=20   S=30
+
+```
+
+So we can order them in two ways and both are correct. So which one should we choose? **Based on how the items with the same value of 
+criteria/comparision are ordered**, the sorting can be categories in following two categories.
+
+### 1. Stable Sort
+
+The items, with the same value of criteria/comparision, **preserve the order of ordering (from original ordering)**. In our example above, 
+if our sorting process always results in the first sorting (1) results, then it is stable as we preserve the order of P1 and P4 (P1 comes before P4 
+  in the original ordering, so we keep the same order).
+
+> Semantically, the stable sort means that the order of the items will be the same (stable) if we try to run the sorting process multiple times.
+> But, to practically ensure that the order remains stable, we rely on the initial ordering of items.
+
+
+### 2. Non-Stable Sort
+
+The items, with the same value of criteria/comparision, **may or may not preserve the order from original ordering**. In our example above, 
+if we have a non-stable sort, the sorting process will sometimes result in the first sorting (1) and other times in second sorting(2).
+
+As you can, the ordering is not stable, if we were to request for first 2 people on this list, we can get [P2, P1] or [P2, P4]. Further more
+if we were get [P2, P1] for first 2 people and request for next 2 people, we can get [P4, P3] or [P1, P3]. So, we can get P1 in the first
+  results as well as in the second results set. **This is one of the reason we get duplicate items on pagination**.
+
+
+**The question of stable and non-stable sorting comes only when we have items with the same criteria/comparision value**. Can we
+avoid it ?
+
+## Unique Sorting
+
+If our criteria/comparision (e.g. order by due date of invoices) returns same value for multiple items, then we can further decide on how we 
+want to order those items. In our above example, if two person have same score, then we may choose to order them in the way they were standing
+earlier. Or we may want to reverse the order. In any case, we can arrive at a unique (stable) ordering. Similar to this example, we can 
+implement a strategy for **unique sorting** and we can ensure a stable order of items if they have the same field value. 
+
+
+### Practical on Invoices Dataset
+
+Suppose we have an `INVOICES` dataset with each item having `ID`, `DUE_DATE`, `AMOUNT` fields. We want to show them in the ascending
+order of `DUE_DATE`. We can write the query something like this..
+
+```sql
+SELECT * FROM `INVOICES` ORDER BY `DUE_DATE` ASC LIMIT 30;
+```
+
+As you might have guessed, there can be multiple invoices with similar DUE_DATE. What would be their order? _Some database engines
+might fallback to primary key (ID) to order those similar DUE_DATE items but there is no guarantee._ In our case, let say, we want
+to order (descending) them by the AMOUNT incase they have same DUE_DATE.
+
+```sql
+SELECT * FROM `INVOICES` 
+    ORDER BY 
+        `DUE_DATE` ASC, 
+        `AMOUNT` DESC 
+    LIMIT 30;
+```
+
+In our case, there can be multiple invoices with same DUE_DATE and same AMOUNT!. We can finally add the `ID` (unique) to sort those
+items as well. This will ensure that the sorting is unique (stable).
+
+```sql
+SELECT * FROM `INVOICES` 
+    ORDER BY 
+        `DUE_DATE` ASC, 
+        `AMOUNT` DESC,
+        `ID` ASC
+    LIMIT 30;
+```
+
+
+As long as we have a unique sortable column (ID) for our dataset, we can get a unique/stable ordering of the items for our sorting preferences.
+
+
+## Next Steps
+
+Other then DB queries, you can also encounter the same problem if you are using a sorting algorithm (hand written or language implemented)
+which is NOT stable. You must always review the sorting process and read the specs for respective languages. Furthermore, you can
+have an unique sortable identifier for every item in the list and fallback to the order of it to ensure a stable sorting.
+
+
+
+
+
+
+

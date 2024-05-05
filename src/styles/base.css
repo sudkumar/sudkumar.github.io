@@ -1,0 +1,19 @@
+article > details {
+  @apply px-4 rounded border-2 overflow-hidden;
+}
+article > details > summary {
+  @apply -mx-4 px-4 py-2 bg-gray-200 font-bold focus:bg-gray-300;
+}
+
+article > table thead th,
+article > table tr td {
+  @apply px-4 py-2 !important;
+}
+
+article > table > tbody tr:hover {
+  @apply bg-gray-50;
+}
+
+article > table {
+  @apply border;
+}

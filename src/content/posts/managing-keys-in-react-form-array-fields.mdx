@@ -1,0 +1,140 @@
+---
+title: 'Managing Keys in React Form Array Fields'
+date: '2024-05-01'
+tags: 'keys,react,field-arrays'
+description: 'Leads how to manage keys for array fields in your React Forms'
+---
+
+import { Problem, Solution } from '../../components/KeysInReactFormArrayFieldsEditor'
+
+`Keys` are very important part of React/similar UI frameworks. Whenever we have a list of DOM nodes, React needs the `key`
+prop to identify every item in the list. You can think of these keys as the IDs of the rendered elements, similar to how
+we have/need our ID cards when we are standing in a queue.
+
+You should checkout the React docs on [Why does React need keys?](https://react.dev/learn/rendering-lists#why-does-react-need-keys) for more details.
+
+## Problem with Indexes as Keys in Forms
+
+If you are have Array Input Fields ([Controlled](https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable)) 
+in the Forms in your React-like environment, you might be using the index or something similar for the `key` prop to 
+pass the individual controlled field item.
+
+This example allows you to get (random) rates for different hotels by their name. You can click on `Add More` to add
+more hotels and click on `Remove` to remove a hotel and type in the hotel's name to get the rates. The rate field is
+reactive to the hotel's name field.
+
+> We are using [React Final Form](https://final-form.org/react) but you can choose any available options. This is not
+> and issue the form libraries.
+
+Here we are using the `index` of the Array as the key for the individual item. <mark>The problem comes when we try to
+remove an item from the list. The removal of an item is causing rates to be refetched for all the following items.</mark>
+
+<Problem client:load />
+
+
+This is simple form but in reality you can imagine having a very nested array where values of some other 
+(nested) fields are reactive to the values of some other fields.
+
+<details>
+
+<summary>Real-World Field Array</summary>
+
+In one of [my project](https://sembark.com), I have a form with array fields having 4 depth as shown below. This
+allows a user to retrieve the rates of Transportation based on dates and selected cabs.
+
+```ts
+type TTransportAndActivities = Array<{ // <- Field Array
+  dates: Array<Date>,
+  services: Array<{ // <- Field Array
+    type: "transport" | "activity" // there are some other types as well
+    service: {
+        id: number,
+        service_id: number,
+        cabs: Array<{ // <- Field Array
+          cab_type: string,
+          no_of_cabs: number,
+          date_wise_rates: Array<{ // <- Field Array
+              date: string,
+              rate: number, // rate fetched via an API
+              custom_rate: number // customized rate entered by you (user)
+          }>
+        }>
+    }
+  }>
+}>
+```
+
+In the form, if you change any data (e.g. `dates`, `service_id`, `cab_type`), it will result in following:
+
+1. *refetch* of the rates 
+2. **will reset the `custom_rate` field**.
+
+These two points are important. Essentially, these two points means that values of some other fields are
+reactive to the values of some other fields.
+
+</details>
+
+
+### What is happening
+
+As stated earlier, the keys are the identities of the items in a list. Because we are using the `index` as the key
+of the list items, removal of an i<sup>th</sup> item is replacing this item with i+1<sup>th</sup> because in the next
+redering process, i+1<sup>th</sup> item becomes the i<sup>th</sup> item. 
+
+Let's understand it with an example. Suppose, you and I are standing in a queue to buy tickets and we are given a token number (key)
+which is our ordering number in the queue. I am standing right behind you. Support you get a token number as 5, and so I will get 
+the 6 number. 
+
+```sh
+# TICKET QUEUE
+ID 1. 2. 3. 4. 5. 6. 7. 8. 9.
+   |  |  |  |  |  |  |  |  |
+               |  |
+              You |
+                 Me
+```
+
+Suddenly you get a call and have to leave for some urgent work, and so your leave. Now what happens with token numbers ?
+As you gussed, I get the number 5 and all other behind me follow with the new token number (old - 1) but the people ahead of me stays 
+the same. 
+
+```sh
+# TICKET QUEUE
+ID 1. 2. 3. 4. 5. 6. 7. 8.
+   |  |  |  |  |  |  |  | 
+               |
+               |
+              Me
+              
+```
+
+Now, there is someone who is inspecting the queue. This person will notice as if all the people from token 5 onwards have been
+changed, instead of the reality, which is that the number 5 is gone and other are the same. 
+
+This inspector is React in the case of our list items and it **will see as if the items has been updated, instead of an item being remove**. 
+Ofcourse as the item is removed, the length is not smaller and so the very last index from earlier has been updated, which doen't 
+matter as there is no item there any longer.
+
+In our example, when we remove an item (say 2<sup>nd</sup> and hotel's name being Hotel 2), the following (3<sup>rd</sup> and hotel's name being Hotel 3)
+item will get its key. React will see as if someone has updated it's (2<sup>nd</sup>'s) content (hotel's name) with the new content (from name Hotel 2 to Hotel 3) and
+so the rates will be refetched.
+
+To tests that the rates are getting refetched because of content change, you can do the following:
+1. Set the name of hotel in 1<sup>st</sup> and 2<sup>nd</sup> item to "Hotel A".
+2. Set the name of the 3<sup>rd</sup> item to something else e.g. "Hotel XYZ".
+3. Now remove the first item. 
+
+You will see that 
+
+1. The rate for the new first item will <b>NOT</b> be fetched. It will keep the rates from older deleted item (1<sup>st</sup>), instead of the rate of the replacing item.
+2. The rate for new second item will be fetched.
+
+## Solution
+
+Instead of relying on the index of the list item, we can associate an identity to every list item by adding a new field (e.g. __id).
+
+<Solution client:load  />
+
+Some Form libraries like [React Hook Form](https://react-hook-form.com/) provides ways to handle the keys for array fields with [some
+constraints on how to use field array](https://react-hook-form.com/docs/usefieldarray#rules).
+
