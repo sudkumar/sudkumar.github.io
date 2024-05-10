@@ -14,6 +14,7 @@ able to reproduce it!
 Have you faced (or are facing) something similar to this?
 
 1. You have paginated the data but sometimes, **an item appears on multiple pages**? But when you search by it's ID, it appears only once!
+1. You have paginated the data but sometimes, **an item DOES NOT appear on any page**? But when you search by it's ID, it does appear!
 2. **Ordering of a simple 4-5 items is sometimes incorrect**? And you are not able to reproduce it!
 
 Then you should check the ordering (`ORDER BY column`) statements in your application. Is this ordering unique or there can be items 
@@ -64,20 +65,28 @@ If the items with the same value of criteria/comparision, **may or may not prese
 if we have a non-stable sort, then the sorting process will sometimes result in the first sorting (1) and other times in second sorting(2).
 
 If our ordering is not stable and we were to request for first 2 people from this list, we can either get [P2, P1] or [P2, P4]. Suppose we get [P2, P1] for first 2 people. 
-Now we further request for next 2 people, we can either get [P4, P3] or [P1, P3]. Hence, we can get P1 in the first result as well as in the second result set! **This is 
+Now we further request for next 2 people, we can either get [P4, P3] or [P1, P3]. If we get [P1, P3], then we get P1 in the first result as well as in the second result set! **This is 
 one of the reason we get duplicate items on pagination**.
 
+```sql
+SELCT * from `LIST` order by `SCORE` LIMIT 2; // [P2, P1]
+SELCT * from `LIST` order by `SCORE` LIMIT 2 OFFSET 2; // [P1, P3]
+```
 
-As you can see, **the question of stable and non-stable sorting comes only when we have items with the same criteria/comparision value**. Can we
-avoid it ?
+Another thing you might have noticed is that we NEVER got P4!!. **This is one of the reasons we DON'T get some items on any page** in non-stable sorting.
 
-## Unique Sorting
+
+
+## Solution: Unique Sorting
+
+**The question of stable and non-stable sorting comes only when we have items with the same criteria/comparision value**. Can we
+avoid it?
 
 If our criteria/comparision (e.g. order by due date of invoices) returns same value for multiple items, then we can further decide on how we 
 want to order those (duplicate) items. In our example above, if two person have the same score, then we may choose to order them in the way they were standing
 earlier. Or we may choose to reverse the order, choosing P4 before P1. In any case, we can arrive at a unique (stable) ordering. 
 
-Similar to this example, we can implement a strategy for **unique sorting** and ensure a stable order of items if they have the same field value. 
+Similar to this example, we can implement a strategy for **unique sorting** for non-stable sorting and ensure a stable order of items if they have the same field value. 
 
 
 ### Practical on Invoices Dataset
