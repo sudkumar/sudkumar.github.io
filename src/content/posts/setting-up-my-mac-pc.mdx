@@ -1,0 +1,304 @@
+---
+title: 'Setting up my new Mac PC'
+date: '2024-05-29'
+tags: 'dotfiles,setup,development,software'
+description: 'Notes on how set up my new mac pc'
+---
+
+## 1. Configuration Directories
+
+Setup XDG variables for Configure directories to `~/.config`, data to `~/.local`, and cache to `~/.cache`
+
+```sh
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_CACHE_HOME="$HOME/.cache”
+```
+
+## 2. Developer Tools
+
+```sh
+git --version # this will install the dev tools
+```
+
+## 3. Package Manager: Homebrew
+
+Visit https://brew.sh and install the Homebrew. After installation, add the bin directory in the path as mentioned in the last step after installation.
+
+## 4. Tmux
+1. Install tmux `brew install tmux`
+2. Create a config directory for tmux at `~/.config/tmux` and create a `tmux.conf` file in it with the following content:
+```sh
+set-environment -g DOTFILES "$DOTFILES"
+# For true RGB color
+set-option -sa terminal-overrides ',screen-256color:RGB'
+
+
+# enable vi mode
+setw -g mode-keys vi
+
+# more settings to make copy-mode more vim-like
+unbind [
+bind Escape copy-mode
+bind P paste-buffer
+bind -T copy-mode-vi 'v' send-keys -X begin-selection
+bind -T copy-mode-vi 'y' send-keys -X copy-pipe-and-cancel "tmux save-buffer - | reattach-to-user-namespace pbcopy"
+
+# Buffers to/from Mac clipboard, yay tmux book from pragprog
+bind C-c run "tmux save-buffer - | reattach-to-user-namespace pbcopy"
+bind C-v run "tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer"
+
+# Rather than constraining window size to the maximum size of any client
+# connected to the session, constrain window size to the maximum size of any
+# client connected to that window. Much more reasonable.
+setw -g aggressive-resize on
+
+# don't rename windows automatically
+set-option -g allow-rename off
+
+# Enable mouse mode (tmux 2.1 and above)
+set -g mouse on
+
+#### key bindings
+
+# reload config file
+bind r source-file ~/.config/tmux/tmux.conf \; display "Config Reloaded!"
+# split panes using | and -
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+unbind '"'
+unbind %
+
+bind -r H resize-pane -L 10
+bind -r J resize-pane -D 10
+bind -r K resize-pane -U 10
+bind -r L resize-pane -R 10
+
+#####################
+# List of plugins #
+####################
+
+set -g @plugin 'tmux-plugins/tpm'
+# basic configuration
+set -g @plugin 'tmux-plugins/tmux-sensible'
+# keep me alive accross shutdowns
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+# vim tmux navigator with C-[hjkl]
+set -g @plugin 'christoomey/vim-tmux-navigator'
+# copy to clipboard
+set -g @plugin 'tmux-plugins/tmux-yank'
+set -g @yank_action 'copy-pipe-no-clear'
+
+bind -T copy-mode    C-c send -X copy-pipe-no-clear "xsel -i --clipboard"
+bind -T copy-mode-vi C-c send -X copy-pipe-no-clear "xsel -i --clipboard"
+
+
+if "test ! -d ~/.config/tmux/plugins/tpm" \
+   "run 'git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm && ~/.config/tmux/plugins/tpm/bin/install_plugins'"
+
+# Initialize TMUX plugin manager (keep this line at the very bottom of tmux.conf)
+run '~/.config/tmux/plugins/tpm/tpm'
+```
+
+3. Start tmux and source the config file with `tmux source ~/.config/tmux/tmux.conf`
+
+### 4.1 Teamocil
+
+Allows us to easily create setup multiple windows and panes in Tmux
+
+1. Install teamocil `sudo gem install teamocil`
+    1. Add  `compctl -g '~/.teamocil/*(:t:r)' teamocil` for zsh auto completion
+2. Make config dir for teamocil `~/.teamocil` and add setup file `sembark.yml`
+
+```yml
+name: Sembark
+windows:
+  - name: App UI
+    root: ~/Documents/workspace/sembark/app/
+    layout: main-vertical
+    focus: true
+    panes:
+      - nvim
+      - commands:
+        - npm start
+        focus: true
+      - git status
+  - name: APIs
+    root: ~/Documents/workspace/sembark/apis/
+    layout: main-vertical
+    panes:
+      - echo "nvim"
+      - git status
+      - commands:
+        - php artisan serve
+        focus: true
+  - name: WWW
+    root: ~/Documents/workspace/sembark/www/
+    layout: main-vertical
+    panes:
+      - echo "nvim"
+      - commands:
+        - echo "npm run dev"
+        focus: true
+```
+
+## 5. Terminal: Alacritty
+1. Download and install alacritty `https://alacritty.org`
+2. Configure using `~/.config/alacritty/alacritty.toml`
+```toml
+[window]
+startup_mode = "Fullscreen"
+
+[font.normal]
+family = "JetBrainsMono Nerd Font"
+style = "Light"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font"
+style = "Italic"
+
+[font]
+size = 16.0
+
+[font.offset]
+x = 1
+y = 14
+```
+
+## 6. Text Editor: NeoVim
+
+1. Install neovim `brew install neovim`
+2. Install the LazyVim deps `http://www.lazyvim.org`
+    1. Install NerdFont using `brew install —cask font-jetbrains-mono-nerd-font`
+    2. Install other deps using `brew install ripgrep fd wget`
+3. Install LazyVim http://www.lazyvim.org/installation
+4. Start the neovim `nvim` and let the lazyvim install the deps
+5. Enable `LazyVim` extras `:LazyExras`
+   - `coding.mini-comment`
+   - `coding.mini-surround`
+   - `coding.yanky`
+   - `formatting.prettier`
+   - `lang.json`
+   - `lang.markdown`
+   - `lang.typescript`
+   - `linting.eslint`
+   - `test.core`
+   - `ui.mini-animate`
+   - `util.dot`
+   - `util.mini-hipatterns`
+
+6. Update existing configuration and install some other plugins
+
+```lua
+return {
+  -- for typescript, LazyVim also includes extra specs to properly setup lspconfig,
+  -- treesitter, mason and typescript.nvim. So instead of the above, you can use:
+  { import = "lazyvim.plugins.extras.lang.typescript" },
+  -- use mini.starter instead of alpha
+  { import = "lazyvim.plugins.extras.ui.mini-starter" },
+
+  -- add any tools you want to have installed below
+  {
+    "williamboman/mason.nvim",
+    opts = {
+      ensure_installed = {
+        "stylua",
+        "shellcheck",
+        "shfmt",
+        "typescript-language-server",
+        "eslint-lsp",
+      },
+    },
+  },
+
+  -- add jsonls and schemastore packages, and setup treesitter for json, json5 and jsonc
+  { import = "lazyvim.plugins.extras.lang.json" },
+  {
+    "nvim-treesitter/nvim-treesitter",
+    opts = {
+      ensure_installed = {
+        "html",
+        "css",
+        "javascript",
+        "json",
+        "lua",
+        "markdown",
+        "markdown_inline",
+        "regex",
+        "tsx",
+        "typescript",
+        "vim",
+        "yaml",
+        "php",
+      },
+    },
+  },
+  {
+    "stevearc/conform.nvim",
+    opts = {
+      formatters_by_ft = {
+        php = { "prettier" },
+      },
+    },
+  },
+  {
+    "christoomey/vim-tmux-navigator",
+    cmd = {
+      "TmuxNavigateLeft",
+      "TmuxNavigateDown",
+      "TmuxNavigateUp",
+      "TmuxNavigateRight",
+      "TmuxNavigatePrevious",
+    },
+    keys = {
+      { "<c-h>", "<cmd><C-U>TmuxNavigateLeft<cr>" },
+      { "<c-j>", "<cmd><C-U>TmuxNavigateDown<cr>" },
+      { "<c-k>", "<cmd><C-U>TmuxNavigateUp<cr>" },
+      { "<c-l>", "<cmd><C-U>TmuxNavigateRight<cr>" },
+      { "<c-\\>", "<cmd><C-U>TmuxNavigatePrevious<cr>" },
+    },
+  },
+  { "olimorris/neotest-phpunit" },
+  { "marilari88/neotest-vitest" },
+  {
+    "nvim-neotest/neotest",
+    opts = { adapters = { "neotest-phpunit", "neotest-vitest" } },
+  },
+  { "tpope/vim-fugitive" },
+}
+```
+
+
+## 7. NVM and NodeJs
+Install node version manager from https://github.com/nvm-sh/nvm and setup the alias in the profile, as mentioned in the installation instructions. Then install the node using `nvm install —lts`.
+
+## 8. PHP and Composer
+
+Install php `brew install php[@version]` and link it with `brew link php[@version]`. Then install the composer https://getcomposer.org/download/ and move
+the executable `composer` to `/usr/local/bin/`
+
+
+## 9. SQL and Redis
+1. Install DBngin from https://dbngin.com for database setup.
+2. Install TablePlus from https://tableplus.com to interact with database using UIs.
+
+## 10. GitHub SSH
+
+1. Setup GitHub ssh using [docs](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+2. Create a `~/.ssh` directory
+3. Generate the keys
+4. Create a `~/.ssh/config` file and setup the authentication
+```sh
+Host github.com
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519
+```
+5. Add the public keys (id_ed25519.pub) to GitHub 
+
+
