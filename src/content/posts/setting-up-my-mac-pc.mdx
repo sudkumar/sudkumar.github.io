@@ -7,9 +7,11 @@ description: 'Notes on how set up my new mac pc'
 
 ## 1. Configuration Directories
 
-Setup XDG variables for Configure directories to `~/.config`, data to `~/.local`, and cache to `~/.cache`
+Update `~/.zprofile` to setup XDG variables for Configure directories to `~/.config`, data to `~/.local`, and cache to `~/.cache`
 
 ```sh
+# Use ~/.zprofile to set the PATH and EDITOR environment variable
+# Config Paths
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
@@ -196,15 +198,45 @@ Configure the git at `~/.gitconfig` with following content
     show = "diff-so-fancy | less --tabs=4 -RFX"
 [pull]
 	rebase = false
-
-
 ```
 
-## 3. Package Manager: Homebrew
+### 3. Antigen: Zsh Plugin Manager
+
+```sh
+curl -L git.io/antigen > ~/.config/antigen.zsh
+```
+
+Add the following content to `~/.zshrc`
+```sh
+# Use ~/.zshrc for aliases and a custom prompt, tweaking the appearance and behavior of the terminal.
+# Antigen: The plugin manager for zsh.
+
+if [[ -a ~/.config/antigen.zsh ]]; then
+  source ~/.config/antigen.zsh
+
+  # Load the oh-my-zsh's library.
+  antigen use oh-my-zsh
+
+  # Bundles from the default repo (robbyrussell's oh-my-zsh).
+  antigen bundle git
+  antigen bundle command-not-found
+
+  # Syntax highlighting bundle.
+  antigen bundle zsh-users/zsh-syntax-highlighting
+
+  # Load the theme.
+  antigen theme robbyrussell
+
+  # Tell Antigen that you're done.
+  antigen apply
+fi
+```
+
+## 4. Package Manager: Homebrew
 
 Visit https://brew.sh and install the Homebrew. After installation, add the bin directory in the path as mentioned in the last step after installation.
 
-## 4. Tmux
+## 5. Tmux
 1. Install tmux `brew install tmux`
 2. Create a config directory for tmux at `~/.config/tmux` and create a `tmux.conf` file in it with the following content:
 ```sh
@@ -281,7 +313,7 @@ run '~/.config/tmux/plugins/tpm/tpm'
 
 3. Start tmux and source the config file with `tmux source ~/.config/tmux/tmux.conf`
 
-### 4.1 Teamocil
+### 5.1 Teamocil
 
 Allows us to easily create setup multiple windows and panes in Tmux
 
@@ -321,7 +353,7 @@ windows:
         focus: true
 ```
 
-## 5. Terminal: Alacritty
+## 6. Terminal: Alacritty
 1. Download and install alacritty `https://alacritty.org`
 2. Configure using `~/.config/alacritty/alacritty.toml`
 ```toml
@@ -348,7 +380,7 @@ x = 1
 y = 14
 ```
 
-## 6. Text Editor: NeoVim
+## 7. Text Editor: NeoVim
 
 1. Install neovim `brew install neovim`
 2. Install the LazyVim deps `http://www.lazyvim.org`
@@ -452,20 +484,61 @@ return {
 ```
 
 
-## 7. NVM and NodeJs
+## 8. NVM and NodeJs
 Install node version manager from https://github.com/nvm-sh/nvm and setup the alias in the profile, as mentioned in the installation instructions. Then install the node using `nvm install —lts`.
 
-## 8. PHP and Composer
+## 9. PHP and Composer
 
 Install php `brew install php[@version]` and link it with `brew link php[@version]`. Then install the composer https://getcomposer.org/download/ and move
 the executable `composer` to `/usr/local/bin/`
 
 
-## 9. SQL and Redis
+## 10. SQL and Redis
 1. Install DBngin from https://dbngin.com for database setup.
 2. Install TablePlus from https://tableplus.com to interact with database using UIs.
 
-## 10. GitHub SSH
+## 11. Add Shell Alias
+
+Append the following to `~/.zshrc`.
+
+```sh
+# Detect which ls flavor is in use
+if ls --color > /dev/null 2>&1; then # GNU ls
+    colorflag="--color"
+else # macOS ls
+    colorflag="-G"
+fi
+
+# use nvim, but don't make me think about it
+alias vim="nvim"
+
+# listing aliases
+alias l="ls -lah ${colorflag}"
+alias la="ls -AF ${colorflag}"
+alias ll="ls -lFh ${colorflag}"
+alias lld="ls -l | grep ^d"
+
+######### Helpers
+alias grep='grep --color=auto'
+# disk free, in Gigabytes, not bytes
+alias df='df -h'
+# calculate disk usage for a folder
+alias du='du -h -c'
+# ips
+alias ips="ifconfig -a | perl -nle'/(\d+\.\d+\.\d+\.\d+)/ && print $1'"
+# remove broken symlinks
+alias clsym="find -L . -name . -o -type d -prune -o -type l -exec rm {} +"
+# File size
+alias fs="stat -f \"%z bytes\""
+
+# tmux aliases
+alias ta='tmux attach'
+alias tls='tmux ls'
+alias tat='tmux attach -t'
+alias tns='tmux new-session -s'
+```
+
+## 12. GitHub SSH
 
 1. Setup GitHub ssh using [docs](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 2. Create a `~/.ssh` directory

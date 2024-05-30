@@ -15,6 +15,15 @@ const { Content } = await entry.render();
 ---
 
 <Layout title={entry.data.title}>
+  <div>
+  <small>
+    <time datetime={entry.data.date.toISOString()}>{entry.data.date.toLocaleString("en", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      })}</time>
+  </small>
+  </div>
   <h1>{entry.data.title}</h1>
   <Content />
 </Layout>

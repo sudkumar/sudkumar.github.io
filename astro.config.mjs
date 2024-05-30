@@ -7,6 +7,7 @@ import react from "@astrojs/react";
 
 // https://astro.build/config
 export default defineConfig({
+  prefetch: true,
   integrations: [
     react(),
     mdx({
@@ -16,4 +17,3 @@ export default defineConfig({
     sitemap(),
   ],
 });
-

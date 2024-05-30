@@ -2,10 +2,11 @@
 import Layout from "../layouts/Layout.astro";
 
 import { getCollection } from "astro:content";
-const blogEntries = await getCollection("posts");
+let blogEntries = await getCollection("posts");
+blogEntries = blogEntries.sort((a, b) => a.data.date > b.data.date ? -1 : 1)
 ---
 
-<Layout title="Welcome to Astro.">
+<Layout title="Portfolio Website of Sudhir M">
   <div class="prose lg:prose-xl mx-auto py-8 px-4">
     <h1>Sudhir Mitharwal</h1>
     <p>Sharing my experience and thoughts.</p>
@@ -13,7 +14,7 @@ const blogEntries = await getCollection("posts");
       {
         blogEntries.map((blogPostEntry) => (
           <li>
-            <a href={`/posts/${blogPostEntry.slug}`}>
+            <a href={`/posts/${blogPostEntry.slug}`} data-astro-prefetch>
               {blogPostEntry.data.title}
             </a>
           </li>
